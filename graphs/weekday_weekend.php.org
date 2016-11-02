@@ -1,0 +1,211 @@
+<?php
+include_once 'graph_functions.php';
+
+$chart_title = "Weekday vs Weekend Accidents Analysis by County between $start_d and $end_d ";
+$data_lg = '';
+$counties_arr = array();
+$num_c = 1;
+//$jcount = array();
+$sql_counties = "select county cur_county, count(auto_id) cc from accidents_data where county !='' and  $date_qry group by county order by cc desc limit 12";
+$res_county = mysql_query($sql_counties) or die(mysql_error());
+while($rows_county = mysql_fetch_assoc($res_county)){
+	extract($rows_county);
+	$counties_arr[] = $cur_county;
+	if($num_c == 1){ $highest_county = $cur_county; $highest_county_val = $cc;}
+	$num_c +=1;
+}
+$all_counties = implode("','",$counties_arr);
+$all_counties = "'$all_counties'";
+//exit;
+$weekday_data = '';
+$weekend_data = '';
+
+foreach($counties_arr as $county_cur){
+	$weekend_count = '';
+	$weekday_count = '';
+	
+	$sql_day = "select auto_id, date cur_date from accidents_data where county = '$county_cur' and $date_qry";
+	//echo "<hr> $sql_day";
+	$res_day = mysql_query($sql_day) or die(mysql_error());
+	while($rows_day = mysql_fetch_array($res_day)){
+		extract($rows_day);		
+		if(date('w', strtotime($cur_date)) == 6 || date('w', strtotime($cur_date)) == 0) {	
+			$weekend_count +=1;
+			$weekend_auto_id[] = $auto_id;
+		}else{
+			$weekday_count +=1;
+			$weekday_auto_id[] = $auto_id;
+		}
+	}
+	$weekend_data .= "$weekend_count,";
+	$weekday_data .= "$weekday_count,";
+}
+$graph_data = "{name: 'Weekday', data: [$weekday_data]},{name: 'Weekend', data: [$weekend_data]}";
+//exit;
+$colors = "colors: ['#55BF3B', '#DF5353'],";
+//$colors = "colors: ['#f7a35c','#90ee7e'],";
+
+echo column_graph('weekend_graph',$chart_title, $all_counties, $graph_data,$colors);
+
+if($report_type != 'dashboard'){
+?>
+<hr>
+
+<div class="row">
+<div class = 'col-md-6' id="wkday_wknd_pie" style="height: 400px;  "></div>
+<?
+	$total_weekday_count = count($weekday_auto_id);
+	$total_weekend_count = count($weekend_auto_id);
+	if($total_weekday_count > $total_weekend_count){ 
+		$highest_weekday = ",sliced: true,selected: true"; 
+		$highest_weekend = ''; 
+		$high_sec ='Weekday';
+		$high_val = $total_weekday_count;
+	}else{ 
+		$highest_weekend = ",sliced: true,selected: true"; 
+		$highest_weekday = ''; 
+		$high_sec ='Weekend';
+		$high_val = $total_weekend_count;
+		}
+
+	//echo "Weekday count- $total_weekday_count Weekend count - $total_weekend_count ";
+	$pie_data = "{name: 'Weekday', y: $total_weekday_count $highest_weekday }, {name: 'Weekend', y: $total_weekend_count $highest_weekend }";
+	$div = 'wkday_wknd_pie';
+	$pie_title = "Weekday vs Weekend Accidents ranking between $start_d and $end_d";
+	$other = '';
+	$pie_colors= "colors: ['#55BF3B', '#DF5353'],";
+	echo pie_chart($div,$pie_title, $pie_data, $other,$pie_colors);
+?>
+
+<div class = 'col-md-6' id="wkday_wknd_pie_info" style=" height:400px; border-left:solid 1px; #CCC; padding-left:2%; overflow-y:scroll; ">
+<?
+	echo "<center><h4>Analytics Summary</h4> </center>";
+	
+	echo "
+		<ul class='list-group'>
+			<li class='list-group-item '>$high_sec's had the highest number of accidents at $high_val accross all counties.</li>
+    		<li class='list-group-item no-border'>$highest_county County had the highest number of accidents at $highest_county_val</li>
+			<li class='list-group-item no-border'>|</li>
+			<li class='list-group-item no-border'>|</li>
+			<li class='list-group-item no-border'>|</li>
+			<li class='list-group-item no-border'></li>
+		  </ul>
+		";
+
+?>
+</div> 
+</div> 
+</hr>
+<div class="row">
+	<div class = 'col-md-12' id="weekend_graph" style="max-width: 90%; height: 500px;  margin:1px; border-radius:4px;"></div>
+</div>
+
+
+<div class="row">
+	<div class='col-md-6' id='weekdays' style='height:70%;overflow-y:auto;'> 
+		<?
+			$weekday_auto_ids = implode(',', $weekday_auto_id);
+			$num = 1;
+			echo " <center> <h4> Weekday Accidents </h4></center><hr>
+			<table id='list_table' class='table table-striped table-hover table-condensed'  >
+				<thead>
+					<th class='td_title'>#</th>
+					<th class='td_title'>Date</th>
+					<th class='td_title'>Time</th>
+					<th class='td_title'>County</th>
+					<th class='td_title'>Road</th>
+					<th class='td_title'>Place</th>
+					<th class='td_title'>View</th>
+				</thead>";
+			$qry = "select * from accidents_data where auto_id in ($weekday_auto_ids) order by date asc, time asc";
+			//echo "<hr> $qry_count <hr>";
+			$results = mysql_query($qry) or die(mysql_error());
+			//Table listing
+			while($row = mysql_fetch_array($results))
+			{ 
+				extract($row);
+				$time_f = date('H:i', strtotime($time));
+				$date_f = date_format(date_create($date), 'jS M Y');
+				$county = ucfirst(strtolower($county));
+				$road = ucfirst(strtolower($road));
+				$base_sub_base = ucfirst(strtolower($base_sub_base));
+				$place = ucfirst(strtolower($place));
+				//$involved = ucfirst(strtolower($involved));
+				$description = ucfirst(strtolower($description));
+				//start listing
+				echo "
+				<tbody>
+				<tr>
+					<td><label id='$auto_id' > $num </label></td> 
+					<td style='min-width:100px;'>$date_f</td> 
+					<td>$time_f</td> 	
+					<td>$county</td>
+					<td>$road</td> 	
+					<td>$place</td> 	
+					
+					<td  style='white-space: nowrap; text-overflow:ellipsis; overflow: hidden; max-width:300px;'>
+						<a href='#' id='nosub' class='nosub' onclick='PopStuff(\"$auto_id\", \"view\");'>View</a></td> 
+					";
+					echo "</tr>";
+				
+				//end listing
+				$num ++; 
+			} 
+			echo "</tbody> </table>";
+		?>
+	</div>
+	<div class='col-md-6' id='weekends' style='height:70%;overflow-y:auto;'> 
+		<?
+			$weekend_auto_ids = implode(',', $weekend_auto_id);
+			$num = 1;
+			echo " <center><h4> Weekend Accidents </h4></center><hr>
+			<table id='list_table' class='table table-striped table-hover table-condensed'  >
+				<thead>
+					<th class='td_title'>#</th>
+					<th class='td_title'>Date</th>
+					<th class='td_title'>Time</th>
+					<th class='td_title'>County</th>
+					<th class='td_title'>Road</th>
+					<th class='td_title'>Place</th>
+					<th class='td_title'>View</th>
+				</thead>";
+			$qry = "select * from accidents_data where auto_id in ($weekend_auto_ids) order by date asc, time asc";
+			//echo "<hr> $qry_count <hr>";
+			$results = mysql_query($qry) or die(mysql_error());
+			//Table listing
+			while($row = mysql_fetch_array($results))
+			{ 
+				extract($row);
+				$time_f = date('H:i', strtotime($time));
+				$date_f = date_format(date_create($date), 'jS M Y');
+				$county = ucfirst(strtolower($county));
+				$road = ucfirst(strtolower($road));
+				$base_sub_base = ucfirst(strtolower($base_sub_base));
+				$place = ucfirst(strtolower($place));
+				//$involved = ucfirst(strtolower($involved));
+				$description = ucfirst(strtolower($description));
+				//start listing
+				echo "
+				<tbody>
+				<tr>
+					<td><label id='$auto_id' > $num </label></td> 
+					<td style='min-width:100px;'>$date_f</td> 
+					<td>$time_f</td> 	
+					<td>$county</td>
+					<td>$road</td> 	
+					<td>$place</td> 	
+					
+					<td  style='white-space: nowrap; text-overflow:ellipsis; overflow: hidden; max-width:300px;'>
+						<a href='#' id='nosub' class='nosub' onclick='PopStuff(\"$auto_id\", \"view\");'>View</a></td> 
+					";
+					echo "</tr>";
+				
+				//end listing
+				$num ++; 
+			} 
+			echo "</tbody> </table>";
+		?>
+	</div>
+</div>
+
+<? } ?>

@@ -1,0 +1,2 @@
+php_flag short_open_tag on
+php_value error_reporting 1

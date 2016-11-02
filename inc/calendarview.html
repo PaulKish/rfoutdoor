@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>CalendarView — JavaScript Calendar Widget</title>
+    <link rel="stylesheet" href="calendarview.css">
+    
+    <script src="prototype.js"></script>
+    <script src="calendarview.js"></script>
+    <script>
+      function setupCalendars() {
+        // Embedded Calendar
+       /* Calendar.setup(
+          {
+            dateField: 'embeddedDateField',
+            parentElement: 'embeddedCalendar'
+          }
+        )*/
+        // Popup Calendar
+        Calendar.setup(
+          {
+            dateField: 'popupDateField',
+            triggerElement: 'popupDateField'
+          }
+        )
+      }
+      Event.observe(window, 'load', function() { setupCalendars() })
+    </script>
+  </head>
+  <body>
+  <div id="popupExample"><input type="text" id="popupDateField" class="dateField" value="Select Date"/></div>
+      
+    
+    
+	
+  </body>
+</html>
